@@ -1,4 +1,7 @@
-import * as THREE from 'https://cdn.bootcdn.net/ajax/libs/three.js/0.156.1/three.module.js';
+import * as THREE from "https://unpkg.com/three@0.162.0/build/three.module.js";
+import {OBJLoader} from "https://livefile.xesimg.com/programme/python_assets/5bcc04d1d301d7a3e096fa6b8708af7f.js";
+import {OrbitControls} from 'https://livefile.xesimg.com/programme/python_assets/22b053c1486c0311a7e493e9419cebf7.js';
+import {MTLLoader} from 'https://livefile.xesimg.com/programme/python_assets/bfdf94e29d1b77c18dbfc5aa778e6df7.js';
 
 console.log(THREE);
 
@@ -37,7 +40,11 @@ class ThreeJS_Scratch {
 
                 "ThreeJS_Scratch.objects": "物体",
                 "ThreeJS_Scratch.makeCube": "创建或设置长方体: [name] 长[a] 宽[b] 高[h] 颜色: [color] 位置: x[x] y[y] z[z]",
+                "ThreeJS_Scratch.importOBJ": "导入或设置模型: [name] OBJ模型网址: [objurl] MTL材质网址: [mtlurl] 位置: x[x] y[y] z[z]",
+                
                 "ThreeJS_Scratch.rotationObject": "将物体: [name] 旋转: x[x] y[y] z[z]",
+                "ThreeJS_Scratch.moveObject": "将物体: [name] 移动到: x[x] y[y] z[z]",
+                
                 "ThreeJS_Scratch.getObjectPos": "获取物体: [name] 的[xyz]坐标",
                 "ThreeJS_Scratch.getObjectRotation": "获取物体: [name] [xyz]的旋转角度",
 
@@ -59,7 +66,11 @@ class ThreeJS_Scratch {
 
                 "ThreeJS_Scratch.objects": "objects",
                 "ThreeJS_Scratch.makeCube": "Create or make a Cube: [name] length[a] width[b] height[h] color: [color] position: x[x] y[y] z[z]",
+                "ThreeJS_Scratch.importOBJ": "Create or make a Model: [name] OBJ url: [objurl] MTL url: [mtlurl] position: x[x] y[y] z[z]",
+
                 "ThreeJS_Scratch.rotationObject": "Object: [name] rotation: x[x] y[y] z[z]",
+                "ThreeJS_Scratch.moveObject": "Object: [name] go to: x[x] y[y] z[z]",
+
                 "ThreeJS_Scratch.getObjectPos": "get Object: [name]\'s [xyz] pos",
                 "ThreeJS_Scratch.getObjectRotation": "get Object: [name]\'s  [xyz] rotation",
                 
@@ -149,9 +160,66 @@ class ThreeJS_Scratch {
                     },
                 },
                 {
+                    opcode: "importOBJ",
+                    blockType: "command",
+                    text: this.formatMessage("ThreeJS_Scratch.importOBJ"),
+                    arguments: {
+                        name: {
+                            type: "string",
+                            defaultValue: 'name',
+                        },
+                        objurl: {
+                            type: "string",
+                            defaultValue: '',
+                        },
+                        mtlurl: {
+                            type: "string",
+                            defaultValue: '',
+                        },
+                        x: {
+                            type: "number",
+                            defaultValue: 0,
+                        },
+                        y: {
+                            type: "number",
+                            defaultValue: 0,
+                        },
+                        z: {
+                            type: "number",
+                            defaultValue: 0,
+                        },
+                        
+                    },
+                },
+                
+                {
                     opcode: "rotationObject",
                     blockType: "command",
                     text: this.formatMessage("ThreeJS_Scratch.rotationObject"),
+                    arguments: {
+                        name: {
+                            type: "string",
+                            defaultValue: 'name',
+                        },
+                        x: {
+                            type: "number",
+                            defaultValue: 0,
+                        },
+                        y: {
+                            type: "number",
+                            defaultValue: 0,
+                        },
+                        z: {
+                            type: "number",
+                            defaultValue: 0,
+                        },
+                        
+                    },
+                },
+                {
+                    opcode: "moveObject",
+                    blockType: "command",
+                    text: this.formatMessage("ThreeJS_Scratch.moveObject"),
                     arguments: {
                         name: {
                             type: "string",
@@ -312,7 +380,7 @@ class ThreeJS_Scratch {
         this.ambient_light = new THREE.AmbientLight(0x000000);
         this.scene.add(this.ambient_light)
 
-        //console.log(THREE);
+        console.log(THREE);
         //console.log(this.renderer);
         //console.log(this.runtime);
         console.log(this.scene);
@@ -350,11 +418,43 @@ class ThreeJS_Scratch {
         this.scene.add(this.objects[name]);
     }
 
+    /**
+     * 导入或设置模型
+     * @param {string} args.name
+     * @param {string} args.objurl
+     * @param {string} args.mtlurl
+     * @param {number} args.x
+     * @param {number} args.y
+     * @param {number} args.z
+     */
+    importOBJ(args) {
+        var name = Scratch.Cast.toString(args.name)
+        const objLoader = new OBJLoader();
+        const mtlLoader = new MTLLoader();
+        mtlLoader.load(Scratch.Cast.toString(args.mtlurl), (mtl) => {
+            mtl.preload();
+            objLoader.setMaterials(mtl);
+            objLoader.load(Scratch.Cast.toString(args.objurl), (root) => {
+            this.objects[name] = root;
+            });
+        });
+        //this.objects[name].position.set(Scratch.Cast.toNumber(args.x), Scratch.Cast.toNumber(args.y), Scratch.Cast.toNumber(args.z));
+        console.log(this.objects[name]);
+        this.scene.add(this.objects[name]);
+    }
+
     rotationObject(args) {
         var name = Scratch.Cast.toString(args.name);
         this.objects[name].rotation.x = THREE.MathUtils.degToRad(Scratch.Cast.toNumber(args.x));
         this.objects[name].rotation.y = THREE.MathUtils.degToRad(Scratch.Cast.toNumber(args.y));
         this.objects[name].rotation.z = THREE.MathUtils.degToRad(Scratch.Cast.toNumber(args.z));
+    }
+
+    moveObject(args) {
+        var name = Scratch.Cast.toString(args.name);
+        this.objects[name].position.x = Scratch.Cast.toNumber(args.x);
+        this.objects[name].position.y = Scratch.Cast.toNumber(args.y);
+        this.objects[name].position.z = Scratch.Cast.toNumber(args.z);
     }
     
     /**
