@@ -2,6 +2,7 @@
 import * as THREE from "https://unpkg.com/three@0.162.0/build/three.module.js";
 
 // 插件
+// 这里为该扩展目录下的三个js文件
 import {OBJLoader} from "https://livefile.xesimg.com/programme/python_assets/5bcc04d1d301d7a3e096fa6b8708af7f.js";
 import {OrbitControls} from 'https://livefile.xesimg.com/programme/python_assets/22b053c1486c0311a7e493e9419cebf7.js';
 import {MTLLoader} from 'https://livefile.xesimg.com/programme/python_assets/bfdf94e29d1b77c18dbfc5aa778e6df7.js';
@@ -23,6 +24,9 @@ const chen_ThreejsCCW_extensionId = "ThreejsCCW";
 class ThreejsCCW {
     constructor(runtime) {
         this.runtime = runtime;
+
+        // 兼容性
+        this.is_webGL_available = false;
 
         // 渲染器
         this.renderer = null;
@@ -52,20 +56,24 @@ class ThreejsCCW {
 
         this._formatMessage = runtime.getFormatMessage({
             "zh-cn": {
-                "ThreejsCCW.name": "ThreeJS&CCW",
-                "ThreejsCCW.init": "初始化并设置背景颜色为[color]",
+                "ThreejsCCW.name": "ThreeJS-CCW",
+                "ThreejsCCW.init": "初始化并设置背景颜色为[color] 大小[sizex]x[sizey]y [Anti_Aliasing]",
+                "ThreejsCCW.Anti_Aliasing.enable": "启用抗锯齿",
+                "ThreejsCCW.Anti_Aliasing.disable": "禁用抗锯齿",
                 "ThreejsCCW.render": "渲染场景",
                 "ThreejsCCW.color_": "颜色: [R] [G] [B]",
                 "ThreejsCCW.tools": "工具",
-                "ThreejsCCW.YN.true": "启用",
-                "ThreejsCCW.YN.false": "禁止",
+                "ThreejsCCW.YN.true": "能",
+                "ThreejsCCW.YN.false": "不能",
                 "ThreejsCCW.controlCamera": "鼠标控制相机：[yn1]右键拖拽 [yn2]中键缩放 [yn3]左键旋转",
-                "ThreejsCCW.isWebGLAvailable": "当前设备支持WebGL吗?",
+                "ThreejsCCW.isWebGLAvailable": "兼容性检查",
+                "ThreejsCCW._isWebGLAvailable": "当前设备支持WebGL吗?",
                 
                 "ThreejsCCW.objects": "物体",
-                "ThreejsCCW.makeCube": "创建或重置长方体: [name] 长[a] 宽[b] 高[h] 颜色: [color] 位置: x[x] y[y] z[z]",
-                "ThreejsCCW.makeSphere": "创建或重置球体: [name] 半径[radius] 水平分段数[w] 垂直分段数[h] 颜色: [color] 位置: x[x] y[y] z[z]",
-                "ThreejsCCW.importOBJ": "导入或重置OBJ模型: [name] OBJ模型网址: [objurl] MTL材质网址: [mtlurl] 位置: x[x] y[y] z[z]",
+                "ThreejsCCW.makeCube": "创建或重置长方体: [name] 长[a] 宽[b] 高[h] 颜色: [color] 位置: x[x] y[y] z[z] [YN]投射阴影 [YN2]被投射阴影",
+                "ThreejsCCW.makeSphere": "创建或重置球体: [name] 半径[radius] 水平分段数[w] 垂直分段数[h] 颜色: [color] 位置: x[x] y[y] z[z] [YN]投射阴影 [YN2]被投射阴影",
+                "ThreejsCCW.makePlane": "创建或重置平面: [name] 长[a] 宽[b] 颜色: [color] 位置: x[x] y[y] z[z] [YN]投射阴影 [YN2]被投射阴影",
+                "ThreejsCCW.importOBJ": "导入或重置OBJ模型: [name] OBJ模型网址: [objurl] MTL材质网址: [mtlurl] 位置: x[x] y[y] z[z] [YN]投射阴影 [YN2]被投射阴影",
                 
                 "ThreejsCCW.rotationObject": "将物体: [name] 旋转: x[x] y[y] z[z]",
                 "ThreejsCCW.moveObject": "将物体: [name] 移动到: x[x] y[y] z[z]",
@@ -73,33 +81,47 @@ class ThreejsCCW {
                 "ThreejsCCW.getObjectPos": "获取物体: [name] 的[xyz]坐标",
                 "ThreejsCCW.getObjectRotation": "获取物体: [name] [xyz]的旋转角度",
 
+                "ThreejsCCW.deleteObject": "删除物体: [name]",
+
                 "ThreejsCCW.xyz.x": "x轴",
                 "ThreejsCCW.xyz.y": "y轴",
                 "ThreejsCCW.xyz.z": "z轴",
                 
                 "ThreejsCCW.lights": "光照",
                 "ThreejsCCW.setAmbientLightColor": "设置环境光颜色: [color]",
-                "ThreejsCCW.makePointLight": "创建或重置点光源: [name] 颜色: [color] 光照强度: [intensity] 位置: x[x] y[y] z[z]",
+                "ThreejsCCW.makePointLight": "创建或重置点光源: [name] 颜色: [color] 光照强度: [intensity] 位置: x[x] y[y] z[z] [YN]投射阴影",
+                "ThreejsCCW.deleteLight": "删除光源: [name]",
+
+                "ThreejsCCW.camera": "相机",
+                "ThreejsCCW.moveCamera": "将相机移动到x[x]y[y]z[z]",
+                "ThreejsCCW.rotationCamera": "将获取相机旋转: x[x] y[y] z[z]",
+                "ThreejsCCW.cameraLookAt": "让相机面向: x[x] y[y] z[z]",
+                "ThreejsCCW.getCameraPos": "获取相机[xyz]坐标",
+                "ThreejsCCW.getCameraRotation": "获取相机[xyz]的旋转角度",
 
                 "ThreejsCCW.fogs": "雾",
                 "ThreejsCCW.enableFogEffect": "启用雾效果并设置雾颜色为：[color] near[near] far[far]",
                 "ThreejsCCW.disableFogEffect": "禁用雾效果",
             },
             en: {
-                "ThreejsCCW.name": "ThreeJS&CCW",
-                "ThreejsCCW.init": "init and set the background color to [color]",
+                "ThreejsCCW.name": "ThreeJS-CCW",
+                "ThreejsCCW.init": "init and set the background color to [color] size:[sizex]x[sizey]y [Anti_Aliasing]",
+                "ThreejsCCW.Anti_Aliasing.enable": "enable anti aliasing",
+                "ThreejsCCW.Anti_Aliasing.disable": "disable anti aliasing",
                 "ThreejsCCW.render": "render",
                 "ThreejsCCW.color_": "color: [R] [G] [B]",
                 "ThreejsCCW.tools": "tools",
-                "ThreejsCCW.YN.true": "enable",
-                "ThreejsCCW.YN.false": "disable",
+                "ThreejsCCW.YN.true": "can",
+                "ThreejsCCW.YN.false": "can\'t",
                 "ThreejsCCW.controlCamera": "Mouse control camera: [yn1]right click drag [yn2] middle click zoom and [yn3] left click rotation",
-                "ThreejsCCW.isWebGLAvailable": "Does the current device support WebGL?",
+                "ThreejsCCW.isWebGLAvailable": "compatibility check",
+                "ThreejsCCW._isWebGLAvailable": "Does the current device support WebGL?",
 
                 "ThreejsCCW.objects": "Objects",
-                "ThreejsCCW.makeCube": "reset or make a Cube: [name] length[a] width[b] height[h] color: [color] position: x[x] y[y] z[z]",
-                "ThreejsCCW.makeSphere": "reset or make a Sphere: [name] radius[radius] widthSegments[w] heightSegments[h] color: [color] position: x[x] y[y] z[z]",
-                "ThreejsCCW.importOBJ": "reset or make a OBJ Model: [name] OBJ url: [objurl] MTL url: [mtlurl] position: x[x] y[y] z[z]",
+                "ThreejsCCW.makeCube": "reset or make a Cube: [name] length[a] width[b] height[h] color: [color] position: x[x] y[y] z[z] [YN]cast shadows [YN2]shadow cast",
+                "ThreejsCCW.makeSphere": "reset or make a Sphere: [name] radius[radius] widthSegments[w] heightSegments[h] color: [color] position: x[x] y[y] z[z] [YN]cast shadows [YN2]shadow cast",
+                "ThreejsCCW.makePlane": "reset or make a Plane: [name] length[a] width[b] color: [color] position: x[x] y[y] z[z] [YN]cast shadows [YN2]shadow cast",
+                "ThreejsCCW.importOBJ": "reset or make a OBJ Model: [name] OBJ url: [objurl] MTL url: [mtlurl] position: x[x] y[y] z[z] [YN]cast shadows [YN2]shadow cast",
 
                 "ThreejsCCW.rotationObject": "Object: [name] rotation: x[x] y[y] z[z]",
                 "ThreejsCCW.moveObject": "Object: [name] go to: x[x] y[y] z[z]",
@@ -107,13 +129,24 @@ class ThreejsCCW {
                 "ThreejsCCW.getObjectPos": "get Object: [name]\'s [xyz] pos",
                 "ThreejsCCW.getObjectRotation": "get Object: [name]\'s  [xyz] rotation",
                 
+                "ThreejsCCW.deleteObject": "delete object: [name]",
+
                 "ThreejsCCW.xyz.x": "x-axis",
                 "ThreejsCCW.xyz.y": "y-axis",
                 "ThreejsCCW.xyz.z": "z-axis",
 
                 "ThreejsCCW.lights": "Lights",
                 "ThreejsCCW.setAmbientLightColor": "set AmbientLight\'s color: [color]",
-                "ThreejsCCW.makePointLight": "reset or make a PointLight: [name] color: [color] intensity: [intensity] position: x[x] y[y] z[z]",
+                "ThreejsCCW.makePointLight": "reset or make a PointLight: [name] color: [color] intensity: [intensity] position: x[x] y[y] z[z] [YN]cast shadows",
+                "ThreejsCCW.deleteLight": "delete ligth: [name]",
+                
+                "ThreejsCCW.camera": "Camera",
+                "ThreejsCCW.moveCamera": "cmaera go to: x[x]y[y]z[z]",
+                "ThreejsCCW.rotationCamera": "cmaera rotation: x[x]y[y]z[z]",
+                "ThreejsCCW.cameraLookAt": "Face the camera towards: x[x] y[y] z[z]",
+                "ThreejsCCW.getCameraPos": "get camera\'s [xyz] pos",
+                "ThreejsCCW.getCameraRotation": "get camera\'s  [xyz] rotation",
+
                 "ThreejsCCW.fogs": "Fog",
                 "ThreejsCCW.enableFogEffect": "Enable fog effect and set fog color to: [color] near[near] far[far]",
                 "ThreejsCCW.disableFogEffect": "Disable fog effect",
@@ -153,6 +186,18 @@ class ThreejsCCW {
                             type: "number",
                             defaultValue: 0,
                         },
+                        sizex: {
+                            type: "number",
+                            defaultValue: 0,
+                        },
+                        sizey: {
+                            type: "number",
+                            defaultValue: 0,
+                        },
+                        Anti_Aliasing: {
+                            type: "string",
+                            menu: "Anti_Aliasing",
+                        }
                     },
                 },
                 {
@@ -198,7 +243,14 @@ class ThreejsCCW {
                             type: "number",
                             defaultValue: 0,
                         },
-                        
+                        YN: {
+                            type: "string",
+                            menu: "YN",
+                        },
+                        YN2: {
+                            type: "string",
+                            menu: "YN",
+                        },
                     },
                 },
                 {
@@ -237,7 +289,56 @@ class ThreejsCCW {
                             type: "number",
                             defaultValue: 0,
                         },
-                        
+                        YN: {
+                            type: "string",
+                            menu: "YN",
+                        },
+                        YN2: {
+                            type: "string",
+                            menu: "YN",
+                        },
+                    },
+                },
+                {
+                    opcode: "makePlane",
+                    blockType: "command",
+                    text: this.formatMessage("ThreejsCCW.makePlane"),
+                    arguments: {
+                        name: {
+                            type: "string",
+                            defaultValue: 'name',
+                        },
+                        a: {
+                            type: "number",
+                            defaultValue: 5,
+                        },
+                        b: {
+                            type: "number",
+                            defaultValue: 5,
+                        },
+                        color: {
+                            type: "number",
+                        },
+                        x: {
+                            type: "number",
+                            defaultValue: 0,
+                        },
+                        y: {
+                            type: "number",
+                            defaultValue: 0,
+                        },
+                        z: {
+                            type: "number",
+                            defaultValue: 0,
+                        },
+                        YN: {
+                            type: "string",
+                            menu: "YN",
+                        },
+                        YN2: {
+                            type: "string",
+                            menu: "YN",
+                        },
                     },
                 },
                 {
@@ -269,10 +370,27 @@ class ThreejsCCW {
                             type: "number",
                             defaultValue: 0,
                         },
-                        
+                        YN: {
+                            type: "string",
+                            menu: "YN",
+                        },
+                        YN2: {
+                            type: "string",
+                            menu: "YN",
+                        },
                     },
                 },
-                
+                {
+                    opcode: "deleteObject",
+                    blockType: "command",
+                    text: this.formatMessage("ThreejsCCW.deleteObject"),
+                    arguments: {
+                        name: {
+                            type: "string",
+                            defaultValue: 'name',
+                        },
+                    },
+                },
                 {
                     opcode: "rotationObject",
                     blockType: "command",
@@ -380,7 +498,10 @@ class ThreejsCCW {
                             type: "number",
                             defaultValue: 0,
                         },
-                        
+                        YN: {
+                            type: "string",
+                            menu: "YN",
+                        },
                     },
                 },
                 {
@@ -393,7 +514,100 @@ class ThreejsCCW {
                         },
                     },
                 },
-                
+                {
+                    opcode: "deleteLight",
+                    blockType: "command",
+                    text: this.formatMessage("ThreejsCCW.deleteLight"),
+                    arguments: {
+                        name: {
+                            type: "string",
+                            defaultValue: 'name',
+                        },
+                    },
+                },
+                "---"+this.formatMessage("ThreejsCCW.camera"),
+                {
+                    opcode: "moveCamera",
+                    blockType: "command",
+                    text: this.formatMessage("ThreejsCCW.moveCamera"),
+                    arguments: {
+                        x: {
+                            type: "number",
+                            defaultValue: 0,
+                        },
+                        y: {
+                            type: "number",
+                            defaultValue: 0,
+                        },
+                        z: {
+                            type: "number",
+                            defaultValue: 0,
+                        },
+                        
+                    },
+                },
+                {
+                    opcode: "rotationCamera",
+                    blockType: "command",
+                    text: this.formatMessage("ThreejsCCW.rotationCamera"),
+                    arguments: {
+                        x: {
+                            type: "number",
+                            defaultValue: 0,
+                        },
+                        y: {
+                            type: "number",
+                            defaultValue: 0,
+                        },
+                        z: {
+                            type: "number",
+                            defaultValue: 0,
+                        },
+                        
+                    },
+                },
+                {
+                    opcode: "cameraLookAt",
+                    blockType: "command",
+                    text: this.formatMessage("ThreejsCCW.cameraLookAt"),
+                    arguments: {
+                        x: {
+                            type: "number",
+                            defaultValue: 0,
+                        },
+                        y: {
+                            type: "number",
+                            defaultValue: 0,
+                        },
+                        z: {
+                            type: "number",
+                            defaultValue: 0,
+                        },
+                        
+                    },
+                },
+                {
+                    opcode: "getCameraPos",
+                    blockType: "reporter",
+                    text: this.formatMessage("ThreejsCCW.getCameraPos"),
+                    arguments: {
+                        xyz: {
+                            type: "string",
+                            menu: "xyz",
+                        },
+                    },
+                },
+                {
+                    opcode: "getCameraRotation",
+                    blockType: "reporter",
+                    text: this.formatMessage("ThreejsCCW.getCameraRotation"),
+                    arguments: {
+                        xyz: {
+                            type: "string",
+                            menu: "xyz",
+                        },
+                    },
+                },
                 "---"+this.formatMessage("ThreejsCCW.fogs"),
                 {
                     opcode: "enableFogEffect",
@@ -459,10 +673,16 @@ class ThreejsCCW {
                     },
                 },
                 {
-                    opcode: "isWebGLAvailable",
+                    opcode: "_isWebGLAvailable",
                     blockType: "reporter",
+                    text: this.formatMessage("ThreejsCCW._isWebGLAvailable")
+                },
+                {
+                    opcode: "isWebGLAvailable",
+                    blockType: "command",
                     text: this.formatMessage("ThreejsCCW.isWebGLAvailable")
                 },
+                
             ],
             
             menus: {
@@ -487,6 +707,21 @@ class ThreejsCCW {
                         
                     ]
                 },
+                Anti_Aliasing: {
+                    acceptReporters: false,
+                    items: [
+                        {
+
+                            text: this.formatMessage('ThreejsCCW.Anti_Aliasing.enable'),
+                            value: 'enable'
+                        },
+                        {
+
+                            text: this.formatMessage('ThreejsCCW.Anti_Aliasing.disable'),
+                            value: 'disable'
+                        },
+                    ]
+                },
                 YN: {
                     acceptReporters: false,
                     items: [
@@ -507,11 +742,18 @@ class ThreejsCCW {
     }
 
     /**
-     * 兼容性检查
-     * @return {boolean}
+         * 兼容性检查
      */
     isWebGLAvailable(args) {
-        return WebGL.isWebGLAvailable();
+        this.is_webGL_available = WebGL.isWebGLAvailable();
+    }
+    /**
+         * 兼容性
+         * @return {boolean}
+     */
+    _isWebGLAvailable(args) {
+        return this.is_webGL_available;
+        
     }
 
     _deleteObject(model) {
@@ -528,14 +770,19 @@ class ThreejsCCW {
         }
      
         this.scene.remove(model);
+
     }
 
     /**
      * 初始化
      * @param {number} args.color
+     * @param {number} args.sizey
+     * @param {number} args.sizex
+     * @param {string} args.Anti_Aliasing
      */
     init(args) {
-        this._ccw.style.display = "none";  // 隐藏原CCW显示canvas
+        // this._ccw.style.display = "none";  // 隐藏原CCW显示canvas
+
         // 创建threejs显示canvas
         if (document.getElementsByClassName('gandi_stage_stage_1fD7k')[0].getElementsByClassName("ThreejsCCW").length == 0) {
             this.tc = document.createElement("canvas");
@@ -545,10 +792,15 @@ class ThreejsCCW {
         
         this.tc.style.width = this._ccw.style.width;
         this.tc.style.height = this._ccw.style.height;
-
-        this.renderer = new THREE.WebGLRenderer({ canvas: this.tc }); // 创建渲染器
+        var _antialias = false;
+        if (Scratch.Cast.toString(args.Anti_Aliasing) == 'enable') {
+            _antialias = true;
+        }
+        this.renderer = new THREE.WebGLRenderer({ canvas: this.tc, antialias: _antialias}); // 创建渲染器
         this.renderer.setClearColor('#000000'); // 设置渲染器背景
-        this.renderer.setSize(this.tc.clientWidth, this.tc.clientHeight, false);
+        this.renderer.shadowMap.enabled = true;
+        //this.renderer.setSize(this.tc.clientWidth, this.tc.clientHeight, false);
+        this.renderer.setSize(Scratch.Cast.toNumber(args.sizex), Scratch.Cast.toNumber(args.sizey))
         this.scene = new THREE.Scene(); // 创建场景
         this.scene.background = new THREE.Color(Scratch.Cast.toNumber(args.color)); // 设置背景颜色
 
@@ -585,7 +837,8 @@ class ThreejsCCW {
     render(args) {
         this.tc.style.width = this._ccw.style.width;
         this.tc.style.height = this._ccw.style.height;
-        this._ccw.style.display = "none";
+        this.tc.display = 'block';
+        //this._ccw.style.display = "none";
         this.renderer.render(this.scene, this.camera);
     }
 
@@ -599,6 +852,8 @@ class ThreejsCCW {
      * @param {number} args.x
      * @param {number} args.y
      * @param {number} args.z
+     * @param {string} args.YN
+     * @param {string} args.YN2
      */
     makeCube(args) {
         // 名称
@@ -613,12 +868,19 @@ class ThreejsCCW {
             color: Scratch.Cast.toNumber(args.color),
         });
         material.fog = true;
+
         // 添加到场景
         if (name in this.objects) {
             this._deleteObject(this.objects[name]);
         }
         this.objects[name] = new THREE.Mesh(geometry, material);
         this.objects[name].position.set(Scratch.Cast.toNumber(args.x), Scratch.Cast.toNumber(args.y), Scratch.Cast.toNumber(args.z));
+        if (Scratch.Cast.toString(args.YN) == 'true') {
+            this.objects[name].castShadow = true;
+        }
+        if (Scratch.Cast.toString(args.YN2) == 'true') {
+            this.objects[name].receiveShadow = true;;
+        }
         this.scene.add(this.objects[name]);
     }
 
@@ -632,6 +894,8 @@ class ThreejsCCW {
      * @param {number} args.x
      * @param {number} args.y
      * @param {number} args.z
+     * @param {string} args.YN
+     * @param {string} args.YN2
      */
     makeSphere(args) {
         // 名称
@@ -646,12 +910,60 @@ class ThreejsCCW {
             color: Scratch.Cast.toNumber(args.color),
         });
         material.fog = true;
+
         // 添加到场景
         if (name in this.objects) {
             this._deleteObject(this.objects[name]);
         }
         this.objects[name] = new THREE.Mesh(geometry, material);
         this.objects[name].position.set(Scratch.Cast.toNumber(args.x), Scratch.Cast.toNumber(args.y), Scratch.Cast.toNumber(args.z));
+        if (Scratch.Cast.toString(args.YN) == 'true') {
+            this.objects[name].castShadow = true;
+        }
+        if (Scratch.Cast.toString(args.YN2) == 'true') {
+            this.objects[name].receiveShadow = true;;
+        }
+        this.scene.add(this.objects[name]);
+    }
+
+    /**
+     * 创建或重置平面
+     * @param {string} args.name
+     * @param {number} args.a
+     * @param {number} args.b
+     * @param {number} args.color
+     * @param {number} args.x
+     * @param {number} args.y
+     * @param {number} args.z
+     * @param {string} args.YN
+     * @param {string} args.YN2
+     */
+    makePlane(args) {
+        // 名称
+        var name = Scratch.Cast.toString(args.name)
+        // 长方体
+        var geometry = new THREE.PlaneGeometry(Scratch.Cast.toNumber(args.a), Scratch.Cast.toNumber(args.b));
+        // var material = new THREE.MeshPhongMaterial({
+        //     color: Scratch.Cast.toNumber(args.color),
+        // });
+        // 纹理
+        var material = new THREE.MeshLambertMaterial({
+            color: Scratch.Cast.toNumber(args.color),
+        });
+        material.fog = true;
+
+        // 添加到场景
+        if (name in this.objects) {
+            this._deleteObject(this.objects[name]);
+        }
+        this.objects[name] = new THREE.Mesh(geometry, material);
+        this.objects[name].position.set(Scratch.Cast.toNumber(args.x), Scratch.Cast.toNumber(args.y), Scratch.Cast.toNumber(args.z));
+        if (Scratch.Cast.toString(args.YN) == 'true') {
+            this.objects[name].castShadow = true;
+        }
+        if (Scratch.Cast.toString(args.YN2) == 'true') {
+            this.objects[name].receiveShadow = true;;
+        }
         this.scene.add(this.objects[name]);
     }
 
@@ -663,6 +975,8 @@ class ThreejsCCW {
      * @param {number} args.x
      * @param {number} args.y
      * @param {number} args.z
+     * @param {string} args.YN
+     * @param {string} args.YN2
      */
     importOBJ(args) {
         // 名称
@@ -670,23 +984,52 @@ class ThreejsCCW {
         // 创建加载器
         const objLoader = new OBJLoader();
         const mtlLoader = new MTLLoader();
+        // 添加到场景
+        if (name in this.objects) {
+            this._deleteObject(this.objects[name]);
+        }
         // 加载模型
         mtlLoader.load(Scratch.Cast.toString(args.mtlurl), (mtl) => {
             mtl.preload();
             objLoader.setMaterials(mtl);
             objLoader.load(Scratch.Cast.toString(args.objurl), (root) => {
+                console.log("--------");
                 console.log(root);
+                console.log("--------");
                 this.objects[name] = root;
+                // this.objects[name].position.set(Scratch.Cast.toNumber(args.x), Scratch.Cast.toNumber(args.y), Scratch.Cast.toNumber(args.z));
+                this.objects[name].position.x = Scratch.Cast.toNumber(args.x);
+                this.objects[name].position.y = Scratch.Cast.toNumber(args.y);
+                this.objects[name].position.z = Scratch.Cast.toNumber(args.z);
+                if (Scratch.Cast.toString(args.YN) == 'true') {
+                    this.objects[name].castShadow = true;
+                }
+                if (Scratch.Cast.toString(args.YN2) == 'true') {
+                    this.objects[name].receiveShadow = true;
+                }
+                for (var i=0; i < this.objects[name].children.length; i++){
+                    if (Scratch.Cast.toString(args.YN) == 'true') {
+                        this.objects[name].children[i].castShadow = true;
+                    }
+                    if (Scratch.Cast.toString(args.YN2) == 'true') {
+                        this.objects[name].children[i].receiveShadow = true;
+                    }
+                }
+                console.log(this.objects[name]);
+                this.scene.add(this.objects[name]);
             });
         });
+    }
 
-        // 添加到场景
+    /**
+     * 删除物体
+     * @param {string} args.name
+     */
+    deleteObject(args) {
+        var name = Scratch.Cast.toString(args.name);
         if (name in this.objects) {
             this._deleteObject(this.objects[name]);
         }
-        this.objects[name].position.set(Scratch.Cast.toNumber(args.x), Scratch.Cast.toNumber(args.y), Scratch.Cast.toNumber(args.z));
-        console.log(this.objects[name]);
-        this.scene.add(this.objects[name]);
     }
 
     rotationObject(args) {
@@ -697,7 +1040,7 @@ class ThreejsCCW {
             this.objects[name].rotation.y = THREE.MathUtils.degToRad(Scratch.Cast.toNumber(args.y));
             this.objects[name].rotation.z = THREE.MathUtils.degToRad(Scratch.Cast.toNumber(args.z));
         } else {
-            return 0;
+            return ;
         }
     }
 
@@ -709,7 +1052,7 @@ class ThreejsCCW {
             this.objects[name].position.y = Scratch.Cast.toNumber(args.y);
             this.objects[name].position.z = Scratch.Cast.toNumber(args.z);
         } else {
-            return 0;
+            return ;
         }
     }
     
@@ -730,7 +1073,7 @@ class ThreejsCCW {
                     return this.objects[name].position.z;
             }
         } else {
-            return 0;
+            return ;
         }
     }
 
@@ -742,7 +1085,7 @@ class ThreejsCCW {
     getObjectRotation(args) {
         var name = Scratch.Cast.toString(args.name);
         if (name in this.objects) {
-                switch (args.xyz) {
+            switch (Scratch.Cast.toString(args.xyz)) {
                 case 'x':
                     return THREE.MathUtils.radToDeg(this.objects[name].rotation.x);
                 case 'y':
@@ -751,7 +1094,7 @@ class ThreejsCCW {
                     return THREE.MathUtils.radToDeg(this.objects[name].rotation.z);
             }
         } else {
-            return 0;
+            return ;
         }
         
     }
@@ -765,6 +1108,7 @@ class ThreejsCCW {
      * @param {number} args.x
      * @param {number} args.y
      * @param {number} args.z
+     * @param {string} args.YN
      */
     makePointLight(args) {
         var name = Scratch.Cast.toString(args.name)
@@ -774,7 +1118,18 @@ class ThreejsCCW {
         }
         this.lights[name] = new THREE.PointLight(Scratch.Cast.toNumber(args.color), Scratch.Cast.toNumber(args.intensity), 0);  //创建光源
         this.lights[name].position.set(Scratch.Cast.toNumber(args.x), Scratch.Cast.toNumber(args.y), Scratch.Cast.toNumber(args.z));  //设置光源的位置
+        if (Scratch.Cast.toString(args.YN) == 'true') {
+            this.lights[name].castShadow = true;
+        }
         this.scene.add(this.lights[name]);  //在场景中添加光源
+    }
+
+    deleteLight(args) {
+        var name = Scratch.Cast.toString(args.name)
+        
+        if (name in this.lights) {
+            this._deleteObject(this.lights[name]);
+        }
     }
 
     /**
@@ -784,6 +1139,71 @@ class ThreejsCCW {
     setAmbientLightColor(args) {
         // 设置环境光颜色
         this.ambient_light.color = new THREE.Color(Scratch.Cast.toNumber(args.color));
+    }
+
+    /**
+     * 移动相机
+     * @param {number} args.x
+     * @param {number} args.y
+     * @param {number} args.z
+     */
+    moveCamera(args) {
+        this.camera.position.x = Scratch.Cast.toNumber(args.x);
+        this.camera.position.y = Scratch.Cast.toNumber(args.y);
+        this.camera.position.z = Scratch.Cast.toNumber(args.z);
+    }
+
+    /**
+     * 旋转相机
+     * @param {number} args.x
+     * @param {number} args.y
+     * @param {number} args.z
+     */
+    rotationCamera(args) {
+        this.camera.rotation.x = THREE.MathUtils.degToRad(Scratch.Cast.toNumber(args.x));
+        this.camera.rotation.y = THREE.MathUtils.degToRad(Scratch.Cast.toNumber(args.y));
+        this.camera.rotation.z = THREE.MathUtils.degToRad(Scratch.Cast.toNumber(args.z));
+    }
+
+    /**
+     * 让相机面向
+     * @param {number} args.x
+     * @param {number} args.y
+     * @param {number} args.z
+     */
+    cameraLookAt(args) {
+        this.camera.lookAt(Scratch.Cast.toNumber(args.x), Scratch.Cast.toNumber(args.y), Scratch.Cast.toNumber(args.z));
+    }
+    
+    /**
+     * 获取相机坐标
+     * @param {string} args.xyz
+     */
+    getCameraPos(args) {
+        console.log(this.camera);
+        switch (Scratch.Cast.toString(args.xyz)) {
+            case 'x':
+                return this.camera.position.x;
+            case 'y':
+                return this.camera.position.y;
+            case 'z':
+                return this.camera.position.z;
+        }
+    }
+
+    /**
+     * 获取相机旋转角度
+     * @param {string} args.xyz
+     */
+    getCameraRotation(args) {
+        switch (Scratch.Cast.toString(args.xyz)) {
+            case 'x':
+                return THREE.MathUtils.radToDeg(this.camera.rotation.x);
+            case 'y':
+                return THREE.MathUtils.radToDeg(this.camera.rotation.y);
+            case 'z':
+                return THREE.MathUtils.radToDeg(this.camera.rotation.z);
+        }
     }
 
     /**
@@ -857,11 +1277,11 @@ window.tempExt = {
     },
     l10n: {
         "zh-cn": {
-            "ThreejsCCW.name": "ThreeJS&CCW",
+            "ThreejsCCW.name": "ThreeJS-CCW",
             "ThreejsCCW.descp": "WebGL 启动！"
         },
         en: {
-            "ThreejsCCW.name": "ThreeJS&CCW",
+            "ThreejsCCW.name": "ThreeJS-CCW",
             "ThreejsCCW.descp": "WebGL Start!"
         }
     }
